@@ -113,8 +113,8 @@ class FileCompresser{
 
 
         RandomAccessFile raf = new RandomAccessFile(outputFile, "rw");
-        raf.seek(bitsSize);
-        raf.writeLong(bitsSizePos);
+        raf.seek(bitsSizePos);
+        raf.writeLong(bitsSize);
         raf.close();
             System.out.println("Binary data written to output");
         } catch (IOException e) {
