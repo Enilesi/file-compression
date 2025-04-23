@@ -10,13 +10,15 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Scanner;
 
-
-class FileCompresser{
-
-    private static int R = 256;
+import javax.management.RuntimeErrorException;
 
 
-    private static class HufmanNode implements Comparable<HufmanNode> {
+public class FileCompresser{
+
+    protected static int R = 256;
+
+
+    protected static class HufmanNode implements Comparable<HufmanNode> {
         char ch;
         int freq;
         HufmanNode left, right;
@@ -37,6 +39,22 @@ class FileCompresser{
         }
     }
 
+    public static void main(String[] args) {
+        if (args.length < 3) {
+            System.out.println("Inncorect nr of args, expecting: <mode(-c or -d)> <input-file> <output-file>");
+            return;
+        }
+    
+        if (args[0].equals("-c")) Encode.encode(args[1], args[2]);
+        else if (args[0].equals("-d")) Decode.decode();
+        else throw new RuntimeException("Inncorect mode, expecting: <mode(-c or -d)>");
+    }
+    
+
+    
+}
+
+class Encode extends FileCompresser{
     public static void encode(String inputFile, String outputFile) {
         HashMap<Byte, Integer> freq = new HashMap<>();
     
@@ -149,16 +167,13 @@ class FileCompresser{
         }
         return pq.remove();
     }
+}
 
+class Decode extends FileCompresser{
 
+    public static void decode(){
 
-public static void main(String[] args) {
-    if (args.length < 2) {
-        System.out.println("Inncorect nr of args, expecting: <input-file> <output-file>");
-        return;
     }
 
-    encode(args[0],args[1]);
 }
 
-}
