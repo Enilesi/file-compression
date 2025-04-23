@@ -1,5 +1,7 @@
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -42,23 +44,47 @@ class FileCompresser{
         }
     }
 
-    public static void encode(String inputFile){
-        HashMap<Character,Integer> freq=new HashMap<>();
-        
-        try (Scanner sc = new Scanner(new File(inputFile))) {
-        sc.useDelimiter("");
-
-        while(sc.hasNext()){
-            Character ch = sc.next().charAt(0);
-            freq.put(ch, (freq.getOrDefault(ch,0)+1) );
+    public static void encode(String inputFile) {
+        HashMap<Byte, Integer> freq = new HashMap<>();
+    
+        try (FileInputStream fis = new FileInputStream(inputFile)) {
+            int b;
+            while ((b = fis.read()) != -1) {
+                byte byteVal = (byte) b;
+                freq.put(byteVal, freq.getOrDefault(byteVal, 0) + 1);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    } catch (FileNotFoundException e) {
-        e.printStackTrace();
+    
+        for (Map.Entry<Byte, Integer> entry : freq.entrySet()) {
+            int unsignedVal = entry.getKey() & 0xFF;
+            System.out.println("Byte: " + unsignedVal + ", Frequency: " + entry.getValue());
+        }
+
+        HufmanNode root = buildHufmanTree(freq);
+
+  
     }
-    for (Map.Entry<Character, Integer> entry : freq.entrySet()) {
-        System.out.println("Character: " + entry.getKey() + ", Frequency: " + entry.getValue());
+
+    private static HufmanNode buildHufmanTree(HashMap<Byte, Integer> freq) {
+  
+        PriorityQueue<HufmanNode> pq = new PriorityQueue<>();
+        for (Map.Entry<Byte, Integer> f: freq.entrySet()){
+            if (f.getValue()>0)
+                pq.add(new HufmanNode((char) (f.getKey() & 0xFF),f.getValue(), null, null));
+        }
+        while (pq.size() > 1) {
+            HufmanNode left = pq.remove();
+            HufmanNode right = pq.remove();
+            HufmanNode parent = new HufmanNode('\0', left.freq + right.freq, left, right);
+            pq.add(parent);
+        }
+        return pq.remove();
     }
-}
+
+    
+    
 
 public static void main(String[] args) {
     if (args.length < 1) {
