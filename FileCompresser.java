@@ -4,6 +4,7 @@ import java.util.*;
 
 public class FileCompresser{
 
+    public static final String Encode = null;
     protected static int R = 256;
 
 
