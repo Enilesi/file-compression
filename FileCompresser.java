@@ -46,14 +46,50 @@ public class FileCompresser{
 
     public static void main(String[] args) {
         if (args.length < 3) {
-            System.out.println("Inncorect nr of args, expecting: <mode(-c or -d)> <input-file> <output-file>");
+            System.out.println("Incorrect nr of args, expecting: <mode(-c or -d)> <input-file> <output-file>");
             return;
         }
     
-        if (args[0].equals("-c")) Encode.encode(args[1], args[2]);
-        else if (args[0].equals("-d")) Decode.decode(args[1], args[2]);
-        else throw new RuntimeException("Inncorect mode, expecting: <mode(-c or -d)>");
+        String mode = args[0];
+        String inputFile = args[1];
+        String outputFile = args[2];
+    
+        long startTime = System.nanoTime();
+    
+        if (mode.equals("-c")) {
+            Encode.encode(inputFile, outputFile);
+        } else if (mode.equals("-d")) {
+            Decode.decode(inputFile, outputFile);
+        } else {
+            throw new RuntimeException("Incorrect mode, expecting: <mode(-c or -d)>");
+        }
+    
+        long endTime = System.nanoTime();
+        double durationMs = (endTime - startTime) / 1_000_000.0;
+        System.out.println("Operation took: " + durationMs + " ms");
+    
+        if (mode.equals("-c")) {
+            File in = new File(inputFile);
+            File out = new File(outputFile);
+            double compressionRate = (100.0 * out.length()) / in.length();
+            System.out.println("Original size: " + in.length() + " bytes");
+            System.out.println("Compressed size: " + out.length() + " bytes");
+            System.out.printf("Compression rate: %.2f%%\n", compressionRate);
+        }
+
+        else if (mode.equals("-d")) {
+            File in = new File(inputFile);
+            File out = new File(outputFile);
+            System.out.println("Compressed file size: " + in.length() + " bytes");
+            System.out.println("Decompressed file size: " + out.length() + " bytes");
+        } else {
+        throw new RuntimeException("Incorrect mode, expecting: <mode(-c or -d)>");
     }
+        
+    }
+
+    
+
 
     
 
