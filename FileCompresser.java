@@ -1,16 +1,5 @@
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Scanner;
-
-import javax.management.RuntimeErrorException;
+import java.io.*;
+import java.util.*;
 
 
 public class FileCompresser{
@@ -39,6 +28,22 @@ public class FileCompresser{
         }
     }
 
+    protected static HufmanNode buildHufmanTree(HashMap<Byte, Integer> freq) {
+  
+        PriorityQueue<HufmanNode> pq = new PriorityQueue<>();
+        for (Map.Entry<Byte, Integer> f: freq.entrySet()){
+            if (f.getValue()>0)
+                pq.add(new HufmanNode((char) (f.getKey() & 0xFF),f.getValue(), null, null));
+        }
+        while (pq.size() > 1) {
+            HufmanNode left = pq.remove();
+            HufmanNode right = pq.remove();
+            HufmanNode parent = new HufmanNode('\0', left.freq + right.freq, left, right);
+            pq.add(parent);
+        }
+        return pq.remove();
+    }
+
     public static void main(String[] args) {
         if (args.length < 3) {
             System.out.println("Inncorect nr of args, expecting: <mode(-c or -d)> <input-file> <output-file>");
@@ -46,9 +51,10 @@ public class FileCompresser{
         }
     
         if (args[0].equals("-c")) Encode.encode(args[1], args[2]);
-        else if (args[0].equals("-d")) Decode.decode();
+        else if (args[0].equals("-d")) Decode.decode(args[1], args[2]);
         else throw new RuntimeException("Inncorect mode, expecting: <mode(-c or -d)>");
     }
+
     
 
     
@@ -96,8 +102,8 @@ class Encode extends FileCompresser{
                 
             }
 
-            long bitsSize = 0;
-            long bitsSizePos = fout.size(); 
+            long fileSize = 0;
+            long fileSizePos = fout.size(); 
             fout.writeLong(0);
 
             FileInputStream fin = new FileInputStream(inputFile);
@@ -113,7 +119,7 @@ class Encode extends FileCompresser{
                 for(char c: huffCode.toCharArray()){
                     bitBuff=(byte)((bitBuff<<1) | (c - '0'));
                     bitNr++;
-                    bitsSize++;
+                    fileSize++;
 
                     if(bitNr==8){
                         fout.writeByte(bitBuff);
@@ -131,10 +137,10 @@ class Encode extends FileCompresser{
 
 
         RandomAccessFile raf = new RandomAccessFile(outputFile, "rw");
-        raf.seek(bitsSizePos);
-        raf.writeLong(bitsSize);
+        raf.seek(fileSizePos);
+        raf.writeLong(fileSize);
         raf.close();
-            System.out.println("Binary data written to output");
+            System.out.println("File encoded! (in binary)");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -151,29 +157,62 @@ class Encode extends FileCompresser{
             System.out.println("Code of " + x.ch + " is " + s);
         }
     }
-
-    private static HufmanNode buildHufmanTree(HashMap<Byte, Integer> freq) {
-  
-        PriorityQueue<HufmanNode> pq = new PriorityQueue<>();
-        for (Map.Entry<Byte, Integer> f: freq.entrySet()){
-            if (f.getValue()>0)
-                pq.add(new HufmanNode((char) (f.getKey() & 0xFF),f.getValue(), null, null));
-        }
-        while (pq.size() > 1) {
-            HufmanNode left = pq.remove();
-            HufmanNode right = pq.remove();
-            HufmanNode parent = new HufmanNode('\0', left.freq + right.freq, left, right);
-            pq.add(parent);
-        }
-        return pq.remove();
-    }
 }
 
-class Decode extends FileCompresser{
+class Decode extends FileCompresser {
 
-    public static void decode(){
+    public static void decode(String inputFile, String outputFile) {
+        HashMap<Byte, Integer> freq = new HashMap<>();
 
+        try (FileInputStream fin = new FileInputStream(inputFile);
+             DataInputStream din = new DataInputStream(new FileInputStream(inputFile));
+             FileOutputStream fout = new FileOutputStream(outputFile)) {
+
+            int freqSize = din.readInt();
+
+            for (int i = 0; i < freqSize; i++) {
+                byte byteVal = (byte) din.readChar();
+                int count = din.readInt();
+                freq.put(byteVal, count);
+            }
+
+
+            long fileSize = din.readLong();
+
+            HufmanNode root = buildHufmanTree(freq);
+
+            HufmanNode current = root;
+
+
+            int bitBuff = 0;
+            int bitNr = 0;
+
+
+            for (long fr = 0; fr < fileSize; fr++) {
+                if (bitNr == 0) {
+                    int nextByte = din.read();
+                    if (nextByte == -1) break;
+                    bitBuff = nextByte;
+                    bitNr = 8;
+                }
+            
+                int bit = (bitBuff >> (bitNr - 1)) & 1;
+                bitNr--;
+            
+                current = (bit == 0) ? current.left : current.right;
+            
+                if (current.isLeaf()) {
+                    fout.write((byte) current.ch);
+                    current = root;
+                }
+            }
+            
+
+            System.out.println("File decoded!");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
 }
 
